@@ -1,0 +1,75 @@
+version: "3.9"
+
+services:
+  # ============= 应用服务 =============
+  app:
+    build: .
+    container_name: research-doc-assistant
+    ports:
+      - "8000:8000"
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+      - postgres
+    restart: unless-stopped
+
+  # ============= PostgreSQL =============
+  postgres:
+    image: postgres:16-alpine
+    container_name: research-postgres
+    environment:
+      POSTGRES_USER: research_user
+      POSTGRES_PASSWORD: research_password
+      POSTGRES_DB: research_doc_assistant
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # ============= Redis =============
+  redis:
+    image: redis:7-alpine
+    container_name: research-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+
+  # ============= Milvus（可选，生产环境使用） =============
+  # milvus-etcd:
+  #   image: quay.io/coreos/etcd:v3.5.5
+  #   container_name: milvus-etcd
+  #   environment:
+  #     ETCD_AUTO_COMPACTION_MODE: revision
+  #     ETCD_AUTO_COMPACTION_RETENTION: "1000"
+  #     ETCD_QUOTA_BACKEND_BYTES: "4294967296"
+  #   command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+
+  # milvus-minio:
+  #   image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+  #   container_name: milvus-minio
+  #   environment:
+  #     MINIO_ACCESS_KEY: minioadmin
+  #     MINIO_SECRET_KEY: minioadmin
+  #   command: minio server /minio_data
+
+  # milvus:
+  #   image: milvusdb/milvus:v2.4-latest
+  #   container_name: milvus-standalone
+  #   ports:
+  #     - "19530:19530"
+  #   depends_on:
+  #     - milvus-etcd
+  #     - milvus-minio
+  #   environment:
+  #     ETCD_ENDPOINTS: milvus-etcd:2379
+  #     MINIO_ADDRESS: milvus-minio:9000
+
+volumes:
+  pgdata:
+  redisdata:
